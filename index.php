@@ -40,7 +40,7 @@
     if (isset($_POST['login'])) {
         $email = $_POST['email'];
         $password = $_POST['password'];
-        
+        $role = $_POST['role'];
         $stmt = $conn->prepare("SELECT * FROM Employees WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -55,7 +55,7 @@
                 if ($role === 'admin' && $email === 'admin@gmail.com') {
                     $_SESSION['user_id'] = $user['employee_id'];
                     $_SESSION['name'] = $user['name'];
-                    
+                    $_SESSION['role'] = 'admin';
                     header("Location: admin_dashboard.php");
                     exit;
 
@@ -64,7 +64,7 @@
                     if ($user['status'] === 'active') {
                         $_SESSION['user_id'] = $user['employee_id'];
                         $_SESSION['name'] = $user['name'];
-                       
+                        $_SESSION['role'] = 'employee';
                         header("Location: user_dashboard.php");
                         exit;
                     } elseif(($user['status'] !== 'active')) {
@@ -82,5 +82,8 @@
     
     ?>
   </div>
+  <footer class="text-center mt-5 py-3 text-muted small">
+  &copy; <?= date("Y") ?> Employee Leave Portal
+</footer>
 </body>
 </html>

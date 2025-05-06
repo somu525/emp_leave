@@ -65,5 +65,8 @@
     }
     ?>
   </div>
+  <footer class="text-center mt-5 py-3 text-muted small">
+  &copy; <?= date("Y") ?> Employee Leave Portal
+</footer>
 </body>
 </html>

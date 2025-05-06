@@ -1,74 +1,80 @@
 <?php
 session_start();
 include 'includes/db.php';
+include 'includes/header.php';
 
-// Redirect if not admin
+// only admin allowed
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: index.php");
+    header("Location: ../index.php");
     exit;
 }
 
-// Approve employee
-if (isset($_GET['approve'])) {
-    $emp_id = $_GET['approve'];
-    $conn->query("UPDATE Employees SET status = 'active' WHERE employee_id = $emp_id");
-}
+// 1) Total employees (exclude manager)
+$resTotal = $conn->query("
+  SELECT COUNT(*) AS total 
+  FROM Employees 
+  WHERE status='active'
+");
+$totalEmp = $resTotal->fetch_assoc()['total'];
 
-// Reject (delete) employee
-if (isset($_GET['reject'])) {
-    $emp_id = $_GET['reject'];
-    $conn->query("DELETE FROM Employees WHERE employee_id = $emp_id");
-}
+// 2) Pending employee approvals
+$resEmpAppr = $conn->query("
+  SELECT COUNT(*) AS cnt 
+  FROM Employees 
+  WHERE status = 'inactive'
+");
+$pendingEmp = $resEmpAppr->fetch_assoc()['cnt'];
+
+// 3) Pending leave approvals
+$resLeaveAppr = $conn->query("
+  SELECT COUNT(*) AS cnt 
+  FROM Leave_Requests 
+  WHERE status = 'submitted'
+");
+$pendingLeave = $resLeaveAppr->fetch_assoc()['cnt'];
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard - Approve Users</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-</head>
-<body class="container mt-5">
-    <h3 class="mb-4">Welcome, <?= $_SESSION['name'] ?> (Admin)</h3>
+<main class="flex-grow-1 container py-4">
+  <h2 class="mb-4">Admin Dashboard</h2>
 
-    <h5>Pending Employee Approvals</h5>
+  <div class="row g-3">
+    <!-- Total Employees -->
+    <div class="col-md-4">
+      <div class="card text-center border-dark shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Total Employees</h5>
+          <p class="display-4"><?= $totalEmp ?></p>
+          <p class="card-text">Active</p>
+        </div>
+      </div>
+    </div>
 
-    <table class="table table-bordered table-striped mt-3">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Position</th>
-                <th>Hire Date</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php
-        $result = $conn->query("SELECT e.*, d.name AS dept_name FROM Employees e 
-                                JOIN Departments d ON e.department_id = d.department_id 
-                                WHERE e.status = 'inactive'");
+    <!-- Employee Approvals -->
+    <div class="col-md-4">
+      <a href="approve_employee.php" class="text-decoration-none">
+        <div class="card text-center shadow-sm border-primary h-100">
+          <div class="card-body">
+            <h5 class="card-title text-primary">Employee Approvals</h5>
+            <p class="display-4 text-primary"><?= $pendingEmp ?></p>
+            <p class="card-text">Pending</p>
+          </div>
+        </div>
+      </a>
+    </div>
 
-        if ($result->num_rows > 0) {
-            while ($emp = $result->fetch_assoc()) {
-                echo "<tr>
-                        <td>{$emp['name']}</td>
-                        <td>{$emp['email']}</td>
-                        <td>{$emp['dept_name']}</td>
-                        <td>{$emp['position']}</td>
-                        <td>{$emp['hire_date']}</td>
-                        <td>
-                            <a href='?approve={$emp['employee_id']}' class='btn btn-success btn-sm'>Approve</a>
-                            <a href='?reject={$emp['employee_id']}' class='btn btn-danger btn-sm' onclick=\"return confirm('Reject and delete this employee?');\">Reject</a>
-                        </td>
-                    </tr>";
-            }
-        } else {
-            echo "<tr><td colspan='6' class='text-center'>No pending approvals</td></tr>";
-        }
-        ?>
-        </tbody>
-    </table>
-</body>
-</html>
+    <!-- Leave Approvals -->
+    <div class="col-md-4">
+      <a href="approve_leave.php" class="text-decoration-none">
+        <div class="card text-center shadow-sm border-success h-100">
+          <div class="card-body">
+            <h5 class="card-title text-success">Leave Approvals</h5>
+            <p class="display-4 text-success"><?= $pendingLeave ?></p>
+            <p class="card-text">Pending</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</main>
+
+
