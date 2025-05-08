@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'])) {
     $start_date    = $_POST['start_date'];
     $end_date      = $_POST['end_date'];
     $reason        = $_POST['reason'];
-    $status        = ($_POST['action'] === 'submitted' ? 'submitted' : 'draft');
+    $status        = ($_POST['action'] === 'pending' ? 'pending' : 'draft');
 
     $upd = $conn->prepare("
       UPDATE Leave_Requests
@@ -50,7 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'])) {
     );
     $upd->execute();
     $message = "<div class='alert alert-success'>Draft " . 
-               ($status==='submitted' ? "submitted" : "updated") . " successfully.</div>";
+               ($status==='pending' ? "pending" : "updated") . " successfully.</div>";
+              
+                header("Location: user_dashboard.php");
+                
+            
 }
 
 // — If an edit‑link was clicked, fetch that draft
@@ -159,7 +163,7 @@ $draftList = $drafts->get_result();
         Delete Draft
       </a></div>
           
-          <button type="submit" name="action" value="submitted" class="btn btn-primary">
+          <button type="submit" name="action" value="pending" class="btn btn-primary">
             Submit for Approval
           </button>
         </div>

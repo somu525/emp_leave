@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $start_date    = $_POST['start_date'];
     $end_date      = $_POST['end_date'];
     $reason        = $_POST['reason'];
-    // read action rather than separate button names
-    $status = in_array($_POST['action'], ['draft','submitted']) 
+    
+    $status = in_array($_POST['action'], ['draft','pending']) 
             ? $_POST['action'] 
             : 'draft';
 
@@ -31,11 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("iissss", $userId, $leave_type_id, $start_date, $end_date, $reason, $status);
 
     if ($stmt->execute()) {
-        if ($status === 'submitted') {
-            $message = "<div class='alert alert-success'>Leave submitted successfully.</div>";
-        } else {
-            $message = "<div class='alert alert-success'>Leave saved as draft successfully.</div>";
-        }
+        header("Location: user_dashboard.php");
+        exit;
     } else {
         $message = "<div class='alert alert-danger'>Error: ".$stmt->error."</div>";
     }
@@ -81,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="d-flex justify-content-between">
       <button type="submit" name="action" value="draft" class="btn btn-secondary">Save as Draft</button>
-      <button type="submit" name="action" value="submitted" class="btn btn-primary">Submit for Approval</button>
+      <button type="submit" name="action" value="pending" class="btn btn-primary">Submit for Approval</button>
     </div>
   </form>
-</main>
+  
+  </main>

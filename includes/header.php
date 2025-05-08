@@ -13,7 +13,7 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
     height: 100vh;
     width: 250px;
     position: fixed;
-    top: 0; left: -250px;
+    top: 0;left:-250px;
     background-color: #f8f9fa;
     transition: left 0.3s;
     z-index: 999;
@@ -28,7 +28,7 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
 </style>
 
 <!-- Header -->
-<header class="bg-primary text-white py-2 px-3 d-flex justify-content-between align-items-center shadow fixed-top" style="z-index:1000;">
+<header class="bg-black text-white py-2 px-3 d-flex justify-content-between align-items-center shadow fixed-top" style="z-index:1000;">
   <div class="d-flex align-items-center">
     <i class="fas fa-bars me-3 cursor-pointer" style="cursor:pointer;" onclick="toggleSidebar()"></i>
     <strong>ELMS</strong>
@@ -56,9 +56,11 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
     <a href="admin_dashboard.php" class="sidebar-link">
       <i class="fas fa-home me-2"></i>Dashboard
     </a>
-    <!-- New: Approve Employee -->
+    <a href="departments.php" class="sidebar-link">
+      <i class="fas fa-building me-2"></i>Departments
+    </a>
     <a href="approve_employee.php" class="sidebar-link">
-      <i class="fas fa-user-check me-2"></i>Approve Employee
+      <i class="fas fa-user-check me-2"></i>Employees
     </a>
 
     <!-- Admin’s leave‑review link -->
@@ -94,7 +96,7 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
     document.getElementById('main-content').classList.toggle('shifted');
   }
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Wrapper for Page Content -->
-<div id="main-content" class="pt-5 mt-4 px-3">
+<div id="main-content" class="pt-5 mt-4 px-3 " >
 

@@ -49,6 +49,17 @@ $history = $historyQuery->get_result();
 <head>
   <meta charset="UTF-8">
   <title>User Dashboard - Leave Portal</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- DataTables CSS -->
+<link 
+  rel="stylesheet" 
+  href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css"/>
+
+<!-- DataTables JS -->
+<script 
+  src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js">
+</script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
@@ -82,8 +93,8 @@ $history = $historyQuery->get_result();
 
   <!-- Leave History -->
   <div class="mb-4">
-    <h4>Leave History</h4>
-    <table class="table table-striped">
+    <h4 class="mb-2">Leave History</h4>
+    <table id="historytable"class="table table-striped">
       <thead>
         <tr>
           <th>Leave Type</th>
@@ -98,8 +109,8 @@ $history = $historyQuery->get_result();
   <?php 
     // choose badge color based on status
     switch ($row['status']) {
-      case 'draft':     $badge = 'warning'; break;
-      case 'submitted': $badge = 'primary'; break;
+      case 'draft':     $badge = 'secondary'; break;
+      case 'pending': $badge = 'warning'; break;
       case 'approved':  $badge = 'success'; break;
       case 'rejected':  $badge = 'danger';  break;
       default:          $badge = 'secondary';
@@ -119,10 +130,19 @@ $history = $historyQuery->get_result();
 <?php endwhile; ?>
       </tbody>
     </table>
+    
   </div>
 
-  <footer class="text-center mt-auto py-3 text-muted small bottom-0">
-  &copy; <?= date("Y") ?> Employee Leave Portal
-</footer>
+  
+
+<script>
+  $(document).ready(function() {
+    $('#historytable').DataTable({
+      pageLength: 3,
+      lengthMenu: [5, 10, 20],
+      order: [[1, 'desc']]  
+    });
+  });
+</script>
 </body>
 </html>

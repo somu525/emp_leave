@@ -58,14 +58,16 @@
         $stmt->bind_param("ssisss", $name, $email, $department_id, $position, $hire_date, $password);
 
         if ($stmt->execute()) {
-            echo "<div class='alert alert-success mt-3'>Registration successful. Awaiting manager approval.</div>";
-        } else {
+          echo "<div class='alert alert-success mt-3'>Registration successful. Awaiting manager approval.</div>";
+          header("Location: index.php");
+          exit();
+      } else {
             echo "<div class='alert alert-danger mt-3'>Error: " . $stmt->error . "</div>";
         }
     }
     ?>
   </div>
-  <footer class="text-center mt-5 py-3 text-muted small">
+  <footer class="text-center bg-light mt-auto py-3 text-muted small fixed-bottom">
   &copy; <?= date("Y") ?> Employee Leave Portal
 </footer>
 </body>

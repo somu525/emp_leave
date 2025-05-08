@@ -8,7 +8,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../index.php");
     exit;
 }
-
 $manager_id = $_SESSION['user_id'];
 
 // Handle approve/reject actions (unchanged)
@@ -20,7 +19,7 @@ if (isset($_GET['action'], $_GET['id'])) {
     $reqRes = $conn->query("SELECT * FROM Leave_Requests WHERE request_id = $req_id");
     if ($reqRes && $reqRes->num_rows === 1) {
         $req = $reqRes->fetch_assoc();
-        if ($req['status'] === 'submitted') {
+        if ($req['status'] === 'pending') {
             $status = $action === 'approve' ? 'approved' : 'rejected';
             $reviewed_at = date("Y-m-d H:i:s");
 
@@ -59,7 +58,7 @@ $sql = "
     FROM Leave_Requests r
     JOIN Employees e ON r.employee_id = e.employee_id
     JOIN Leave_Types l ON r.leave_type_id = l.leave_type_id
-    WHERE r.status = 'submitted'
+    WHERE r.status = 'pending'
 ";
 $result = $conn->query($sql);
 
@@ -69,7 +68,6 @@ if (!$result) {
 }
 
 // Debug: how many pending?
-echo "<div class='alert alert-info'>Found <strong>{$result->num_rows}</strong> pending request(s).</div>";
 ?>
 
 <h5 class="mb-3">Pending Leave Requests</h5>
@@ -110,5 +108,56 @@ echo "<div class='alert alert-info'>Found <strong>{$result->num_rows}</strong> p
     ?>
     </tbody>
 </table>
+<hr class="my-4">
+<h4 class="mb-3">Processed Leave Requests</h4>
+
+<table class="table table-bordered table-striped">
+  <thead class="table-light">
+    <tr>
+      <th>Employee</th>
+      <th>Leave Type</th>
+      <th>Start Date</th>
+      <th>End Date</th>
+      <th>Reason</th>
+      <th>Reviewed At</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <?php
+    $stmt = $conn->query("
+      SELECT 
+        lr.*, 
+        e.name AS employee_name, 
+        lt.type_name 
+      FROM Leave_Requests lr
+      JOIN Employees e ON lr.employee_id = e.employee_id
+      JOIN Leave_Types lt ON lr.leave_type_id = lt.leave_type_id
+      WHERE lr.status IN ('approved', 'rejected')
+      ORDER BY lr.reviewed_at DESC
+    ");
+
+    while ($row = $stmt->fetch_assoc()):
+    ?>
+      <tr>
+        <td><?= htmlspecialchars($row['employee_name']) ?></td>
+        <td><?= htmlspecialchars($row['type_name']) ?></td>
+        <td><?= $row['start_date'] ?></td>
+        <td><?= $row['end_date'] ?></td>
+        <td><?= htmlspecialchars($row['reason']) ?></td>
+        <td><?= date('d M Y, h:i A', strtotime($row['reviewed_at'])) ?></td>
+        <td>
+          <span class="badge bg-<?= $row['status'] === 'approved' ? 'success' : 'danger' ?>">
+            <?= ucfirst($row['status']) ?>
+          </span>
+        </td>
+    </tr>
+    <?php endwhile; ?>
+  </tbody>
+</table>
 
 
+<a href="admin_dashboard.php" class="btn btn-outline-secondary">← Back to Dashboard</a>
+<footer class="text-center bg-light mt-auto py-3 text-muted small ">
+  &copy; <?= date("Y") ?> Employee Leave Portal 
+</footer>
