@@ -7,7 +7,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 include 'includes/db.php';
 include 'includes/header.php';
 
-// Add
 if (isset($_POST['add_department'])) {
     $name = trim($_POST['add_name']);
     if ($name !== '') {
@@ -19,7 +18,6 @@ if (isset($_POST['add_department'])) {
     exit;
 }
 
-// Edit
 if (isset($_POST['update_department'])) {
     $id = $_POST['edit_id'];
     $name = trim($_POST['edit_name']);
@@ -32,7 +30,6 @@ if (isset($_POST['update_department'])) {
     exit;
 }
 
-// Delete
 if (isset($_POST['delete_department'])) {
     $id = $_POST['delete_id'];
     $stmt = $conn->prepare("DELETE FROM Departments WHERE department_id=?");
@@ -41,18 +38,36 @@ if (isset($_POST['delete_department'])) {
     header("Location: departments.php");
     exit;
 }
-
-// Fetch departments
 $departments = $conn->query("SELECT * FROM Departments ORDER BY department_id ");
 ?>
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" />
 
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+<!-- Buttons extension -->
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+<!-- JSZip for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- PDFMake for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
 <main class="container py-4">
   <div class="d-flex justify-content-between mb-3">
     <h2>Departments</h2>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDeptModal">+ Add Department</button>
   </div>
 
-  <table class="table table-bordered">
+  <table id="myTable" class="table table-striped">
     <thead class="table-light">
       <tr>
         <th>ID</th>
@@ -82,7 +97,6 @@ $departments = $conn->query("SELECT * FROM Departments ORDER BY department_id ")
   </table>
 </main>
 
-<!-- Add Department Modal -->
 <div class="modal fade" id="addDeptModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="post" class="modal-content">
@@ -103,7 +117,6 @@ $departments = $conn->query("SELECT * FROM Departments ORDER BY department_id ")
   </div>
 </div>
 
-<!-- Edit Department Modal -->
 <div class="modal fade" id="editDeptModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="post" class="modal-content">
@@ -125,7 +138,6 @@ $departments = $conn->query("SELECT * FROM Departments ORDER BY department_id ")
   </div>
 </div>
 
-<!-- Delete Department Modal -->
 <div class="modal fade" id="deleteDeptModal" tabindex="-1">
   <div class="modal-dialog">
     <form method="post" class="modal-content">
@@ -145,7 +157,6 @@ $departments = $conn->query("SELECT * FROM Departments ORDER BY department_id ")
 </div>
 
 <script>
-  // Edit modal data fill
   document.querySelectorAll('.editBtn').forEach(btn => {
     btn.addEventListener('click', function () {
       document.getElementById('editDeptId').value = this.dataset.id;
@@ -153,12 +164,23 @@ $departments = $conn->query("SELECT * FROM Departments ORDER BY department_id ")
     });
   });
 
-  // Delete modal ID set
   document.querySelectorAll('.deleteBtn').forEach(btn => {
     btn.addEventListener('click', function () {
       document.getElementById('deleteDeptId').value = this.dataset.id;
     });
   });
+ 
+  $(document).ready(function () {
+    const table = $('#myTable').DataTable({
+      dom: 'Bfrtip',
+      buttons: [
+        'copy', 'csv', 'excel', 'pdf', 'print'
+      ],
+      pageLength: 5,
+      lengthMenu: [5, 10, 20],
+      order: [[0, 'asc']]
+    });
+    });
 </script>
 
 <?php include 'includes/footer.php'; ?>

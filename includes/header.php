@@ -7,6 +7,13 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
 ?>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Date Range Picker Dependencies -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<!-- Flatpickr CSS & JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <style>
   #sidebar {
@@ -27,7 +34,7 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
   #main-content.shifted { margin-left: 250px; }
 </style>
 
-<!-- Header -->
+
 <header class="bg-black text-white py-2 px-3 d-flex justify-content-between align-items-center shadow fixed-top" style="z-index:1000;">
   <div class="d-flex align-items-center">
     <i class="fas fa-bars me-3 cursor-pointer" style="cursor:pointer;" onclick="toggleSidebar()"></i>
@@ -41,7 +48,7 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
   </div>
 </header>
 
-<!-- Sidebar -->
+
 <div id="sidebar" class="shadow">
   <div class="text-center">
     <i class="fas fa-user-circle fa-3x mb-2 mt-3"></i>
@@ -52,7 +59,7 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
   <hr>
 
   <?php if ($role === 'admin'): ?>
-    <!-- Admin Dashboard -->
+   
     <a href="admin_dashboard.php" class="sidebar-link">
       <i class="fas fa-home me-2"></i>Dashboard
     </a>
@@ -62,29 +69,22 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
     <a href="approve_employee.php" class="sidebar-link">
       <i class="fas fa-user-check me-2"></i>Employees
     </a>
-
-    <!-- Admin’s leave‑review link -->
     <a href="approve_leave.php" class="sidebar-link">
       <i class="fas fa-check-circle me-2"></i>Approve Leave
     </a>
 
   <?php else: ?>
-    <!-- Employee Dashboard -->
+    
     <a href="user_dashboard.php" class="sidebar-link">
       <i class="fas fa-home me-2"></i>Dashboard
     </a>
-    
-    <!-- Employee’s apply‑leave link -->
     <a href="apply_leave.php" class="sidebar-link">
       <i class="fas fa-paper-plane me-2"></i>Apply Leave
     </a>
-    <!-- New: Drafts -->
     <a href="drafts.php" class="sidebar-link">
       <i class="fas fa-file-alt me-2"></i>Drafts
     </a>
   <?php endif; ?>
-
-  <!-- Common Holidays link -->
   <a href="holidays.php" class="sidebar-link">
     <i class="fas fa-calendar-alt me-2"></i>Holidays
   </a>
@@ -96,7 +96,34 @@ $dashboard = $role === 'admin' ? 'Admin Portal' : 'Employee Portal';
     document.getElementById('main-content').classList.toggle('shifted');
   }
 </script>
+<script>
+  $(document).ready(function() {
+    $('#myTable').DataTable({
+      dom: 'Bfrtip',
+      buttons: [
+        'copy', 'csv', 'excel', 'pdf', 'print'
+      ],
+      pageLength: 5,
+      lengthMenu: [5, 10, 20],
+      order: [[0, 'asc']]
+    });
+  });
+</script>
+<?php
+if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 60*60)) {
+    session_unset();
+    session_destroy();
+ 
+    echo "<script>
+    alert('Session expired. You will be logged out.');
+    window.location.href = 'logout.php';
+</script>";
+    exit;
+}
+ ?>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Wrapper for Page Content -->
+
 <div id="main-content" class="pt-5 mt-4 px-3 " >
 

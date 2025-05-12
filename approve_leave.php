@@ -2,20 +2,17 @@
 session_start();
 include 'includes/db.php';
 include 'includes/header.php';
-
-// Redirect if not admin
+include 'includes/email.php';
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: ../index.php");
     exit;
 }
 $manager_id = $_SESSION['user_id'];
 
-// Handle approve/reject actions (unchanged)
 if (isset($_GET['action'], $_GET['id'])) {
     $action = $_GET['action'];
     $req_id = (int)$_GET['id'];
 
-    // Fetch the specific request
     $reqRes = $conn->query("SELECT * FROM Leave_Requests WHERE request_id = $req_id");
     if ($reqRes && $reqRes->num_rows === 1) {
         $req = $reqRes->fetch_assoc();
@@ -30,29 +27,55 @@ if (isset($_GET['action'], $_GET['id'])) {
             );
             if (!$upd) {
                 echo "<div class='alert alert-danger'>Failed to update request: " . $conn->error . "</div>";
-            } elseif ($status === 'approved') {
-                // update balance
-                $days = (strtotime($req['end_date']) - strtotime($req['start_date'])) / (60*60*24) + 1;
-                $balUpd = $conn->query(
-                    "UPDATE Leave_Balances
-                     SET used = used + $days
-                     WHERE employee_id={$req['employee_id']} 
-                       AND leave_type_id={$req['leave_type_id']}"
-                );
-                if (!$balUpd) {
-                    echo "<div class='alert alert-danger'>Failed to update balance: " . $conn->error . "</div>";
-                }
-            }
+            } elseif ($status === 'rejected') {
+              $start = new DateTime($req['start_date']);
+              $end = new DateTime($req['end_date']);
+          
+              function countWeekdays($start, $end) {
+                  $count = 0;
+                  $current = clone $start; 
+                  while ($current <= $end) {
+                      $day = $current->format('N'); 
+                      if ($day < 6) $count++;
+                      $current->modify('+1 day');
+                  }
+                  return $count;
+              }
+          
+              $days = countWeekdays($start, $end);
+          
+              $stmt = $conn->prepare("
+                  UPDATE Leave_Balances
+                  SET used = used - ?
+                  WHERE employee_id = ? AND leave_type_id = ?
+              ");
+              $stmt->bind_param("iii", $days, $req['employee_id'], $req['leave_type_id']);
+              if (!$stmt->execute()) {
+                  echo "<div class='alert alert-danger'>Failed to restore balance: " . $stmt->error . "</div>";
+              }
+          }
+          
+            $emp = $conn->query("SELECT name, email FROM Employees WHERE employee_id = {$req['employee_id']}")->fetch_assoc();
+            $leaveType = $conn->query("SELECT type_name FROM Leave_Types WHERE leave_type_id = {$req['leave_type_id']}")->fetch_assoc();
+
+            $subject = "Leave Request " . ucfirst($status);
+            $body = "
+                <p>Hi {$emp['name']},</p>
+                <p>Your leave request from <strong>{$req['start_date']}</strong> to <strong>{$req['end_date']}</strong> for <strong>{$leaveType['type_name']}</strong> has been <strong>" . ucfirst($status) . "</strong>.</p>
+                <p><strong>Reason:</strong> {$req['reason']}</p>
+                <br>
+                <p>Regards,<br>Admin</p>
+            ";
+
+            sendEmail($emp['email'], $subject, $body);
         }
     } else {
         echo "<div class='alert alert-warning'>Request not found or already processed.</div>";
     }
-    // redirect to refresh list
     header("Location: approve_leave.php");
     exit;
 }
 
-// 2. Check for Pending Leave Requests & 4. Debugging Output
 $sql = "
     SELECT r.*, e.name AS emp_name, l.type_name
     FROM Leave_Requests r
@@ -62,15 +85,34 @@ $sql = "
 ";
 $result = $conn->query($sql);
 
-// Debug: did the query succeed?
 if (!$result) {
     die("<div class='alert alert-danger'>Query failed: " . $conn->error . "</div>");
 }
 
-// Debug: how many pending?
 ?>
 
 <h5 class="mb-3">Pending Leave Requests</h5>
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" />
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+<!-- Buttons extension -->
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+<!-- JSZip for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- PDFMake for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
 
 <table class="table table-bordered">
     <thead>
@@ -102,7 +144,6 @@ if (!$result) {
             </tr>";
         }
     } else {
-        // 2. No pending requests
         echo "<tr><td colspan='7' class='text-center'>No pending requests found.</td></tr>";
     }
     ?>
@@ -110,8 +151,16 @@ if (!$result) {
 </table>
 <hr class="my-4">
 <h4 class="mb-3">Processed Leave Requests</h4>
+<div class="mb-3">
+  <label for="statusFilter" class="form-label">Filter by Status:</label>
+  <select id="statusFilter" class="form-select" style="width: 200px;">
+    <option value="">All</option>
+    <option value="approved">Approved</option>
+    <option value="rejected">Rejected</option>
+  </select>
+</div>
 
-<table class="table table-bordered table-striped">
+<table id="myTable" class="table table-bordered table-striped">
   <thead class="table-light">
     <tr>
       <th>Employee</th>
@@ -155,6 +204,24 @@ if (!$result) {
     <?php endwhile; ?>
   </tbody>
 </table>
+<script>
+  $(document).ready(function () {
+    const table = $('#myTable').DataTable({
+      dom: 'Bfrtip',
+      buttons: [
+        'copy', 'csv', 'excel', 'pdf', 'print'
+      ],
+      pageLength: 5,
+      lengthMenu: [5, 10, 20],
+      order: [[0, 'asc']]
+    });
+
+    $('#statusFilter').on('change', function () {
+      const selected = $(this).val().toLowerCase();
+      table.column(6).search(selected).draw();  
+    });
+  });
+</script>
 
 
 <a href="admin_dashboard.php" class="btn btn-outline-secondary">← Back to Dashboard</a>

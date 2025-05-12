@@ -9,8 +9,6 @@ include 'includes/header.php';
 
 $userId = $_SESSION['user_id'];
 $message = '';
-
-// Fetch only valid leave types
 $types = $conn->query("SELECT * FROM Leave_Types WHERE leave_type_id IN (1,2,3)");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,23 +16,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $start_date    = $_POST['start_date'];
     $end_date      = $_POST['end_date'];
     $reason        = $_POST['reason'];
-    
-    $status = in_array($_POST['action'], ['draft','pending']) 
-            ? $_POST['action'] 
-            : 'draft';
+    $status        = in_array($_POST['action'], ['draft', 'pending']) ? $_POST['action'] : 'draft';
+    $start = new DateTime($start_date);
+    $end = new DateTime($end_date);
+    function countWeekdays($start, $end) {
+      $count = 0;
+      $current = clone $start;
+      while ($current <= $end) {
+          $day = $current->format('N'); 
+          if ($day < 6) $count++;
+          $current->modify('+1 day');
+      }
+      return $count;
+  }
+  $days = countWeekdays($start, $end);
+  
 
-    $stmt = $conn->prepare("
-      INSERT INTO Leave_Requests
-        (employee_id, leave_type_id, start_date, end_date, reason, status, requested_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW())
-    ");
-    $stmt->bind_param("iissss", $userId, $leave_type_id, $start_date, $end_date, $reason, $status);
+    if ($status === 'pending') {
+        if ($days > 3) {
+            $message = "<div class='alert alert-warning'>You cannot apply for more than 3 days.</div>";
+        } else {
+            $year = date('Y');
+            $check = $conn->prepare("SELECT total_allocated, used FROM leave_balances WHERE employee_id = ? AND leave_type_id = ? AND year = ?");
+            $check->bind_param("iii", $userId, $leave_type_id, $year);
+            $check->execute();
+            $result = $check->get_result()->fetch_assoc();
 
-    if ($stmt->execute()) {
-        header("Location: user_dashboard.php");
-        exit;
+            if (!$result) {
+                $message = "<div class='alert alert-danger'>No leave balance found for this type.</div>";
+            } else {
+                $remaining = $result['total_allocated'] - $result['used'];
+
+                if ($days > $remaining) {
+                    $message = "<div class='alert alert-danger'>You have only $remaining days left for this leave type.</div>";
+                } else {
+                    $update = $conn->prepare("UPDATE leave_balances SET used = used + ? WHERE employee_id = ? AND leave_type_id = ? AND year = ?");
+                    $update->bind_param("iiii", $days, $userId, $leave_type_id, $year);
+                    $update->execute();
+
+                    $stmt = $conn->prepare("
+                        INSERT INTO Leave_Requests (employee_id, leave_type_id, start_date, end_date, reason, status, requested_at)
+                        VALUES (?, ?, ?, ?, ?, ?, NOW())
+                    ");
+                    $stmt->bind_param("iissss", $userId, $leave_type_id, $start_date, $end_date, $reason, $status);
+
+                    if ($stmt->execute()) {
+                        header("Location: user_dashboard.php");
+                        exit;
+                    } else {
+                        $message = "<div class='alert alert-danger'>Error: " . $stmt->error . "</div>";
+                    }
+                }
+            }
+        }
     } else {
-        $message = "<div class='alert alert-danger'>Error: ".$stmt->error."</div>";
+        $stmt = $conn->prepare("
+            INSERT INTO Leave_Requests (employee_id, leave_type_id, start_date, end_date, reason, status, requested_at)
+            VALUES (?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->bind_param("iissss", $userId, $leave_type_id, $start_date, $end_date, $reason, $status);
+
+        if ($stmt->execute()) {
+            header("Location: user_dashboard.php");
+            exit;
+        } else {
+            $message = "<div class='alert alert-danger'>Error: " . $stmt->error . "</div>";
+        }
     }
 }
 ?>
@@ -62,14 +109,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="mb-3">
-      <label class="form-label">Start Date</label>
-      <input type="date" name="start_date" class="form-control" required>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label">End Date</label>
-      <input type="date" name="end_date" class="form-control" required>
-    </div>
+  <label class="form-label">Leave Dates (max 3 working days, weekends excluded)</label>
+  <input type="text" id="leave_range" class="form-control" placeholder="Select date range" required>
+  <input type="hidden" name="start_date" id="start_date">
+  <input type="hidden" name="end_date" id="end_date">
+</div>
 
     <div class="mb-3">
       <label class="form-label">Reason</label>
@@ -81,5 +125,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <button type="submit" name="action" value="pending" class="btn btn-primary">Submit for Approval</button>
     </div>
   </form>
-  
-  </main>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const countWeekdays = (start, end) => {
+    let count = 0;
+    const current = new Date(start);
+    while (current <= end) {
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) count++; 
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
+  };
+
+  flatpickr("#leave_range", {
+    mode: "range",
+    dateFormat: "Y-m-d",
+    onClose: function (selectedDates) {
+      if (selectedDates.length === 2) {
+        const [start, end] = selectedDates;
+        const weekdays = countWeekdays(start, end);
+        if (weekdays > 3) {
+          alert("You can only apply for up to 3 working days (weekends not counted).");
+          this.clear();
+          document.getElementById("start_date").value = '';
+          document.getElementById("end_date").value = '';
+        } else {
+          document.getElementById("start_date").value = start.toISOString().split('T')[0];
+          document.getElementById("end_date").value = end.toISOString().split('T')[0];
+        }
+      }
+    }
+  });
+});
+</script>
+
+
+</main>

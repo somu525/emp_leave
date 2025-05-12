@@ -39,7 +39,6 @@
       </div>
     </form>
 
-    <!-- Login link -->
     <p class="mt-3 text-center">
       Already have an account? <a href="index.php">Login</a>
     </p>

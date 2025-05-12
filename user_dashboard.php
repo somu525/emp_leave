@@ -5,7 +5,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'employee') {
     exit;
 }
 include 'includes/db.php';
-include 'includes/header.php';
+require 'includes/header.php';
 
 
 $userId = $_SESSION['user_id'];
@@ -13,25 +13,18 @@ $name = $_SESSION['name'];
 
 // Fetch leave balances
 $balanceQuery = $conn->prepare("
-  SELECT 
+SELECT 
     LT.type_name,
     LB.total_allocated,
-    COALESCE(SUM(DATEDIFF(LR.end_date,LR.start_date) + 1), 0) AS used
+    LB.used
   FROM Leave_Balances LB
-  JOIN Leave_Types LT 
-    ON LB.leave_type_id = LT.leave_type_id
-  LEFT JOIN Leave_Requests LR 
-    ON LB.employee_id    = LR.employee_id
-   AND LB.leave_type_id = LR.leave_type_id
-   AND LR.status        = 'approved'
+  JOIN Leave_Types LT ON LB.leave_type_id = LT.leave_type_id
   WHERE LB.employee_id = ?
-  GROUP BY LB.leave_type_id, LT.type_name, LB.total_allocated
 ");
 $balanceQuery->bind_param("i", $userId);
 $balanceQuery->execute();
 $balances = $balanceQuery->get_result();
 
-// Fetch leave history
 $historyQuery = $conn->prepare("
     SELECT LR.start_date, LR.end_date, LT.type_name, LR.status, LR.reason
     FROM Leave_Requests LR
@@ -52,23 +45,35 @@ $history = $historyQuery->get_result();
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- DataTables CSS -->
-<link 
-  rel="stylesheet" 
-  href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" />
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- DataTables JS -->
-<script 
-  src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js">
-</script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+
+<!-- Buttons extension -->
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
+<!-- JSZip for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!-- PDFMake for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
   
   
-  <!-- Leave Balances -->
   <div class="mb-4">
     <h4>Leave Balances</h4>
     
+
     <table class="table table-bordered">
       <thead>
         <tr>
@@ -80,20 +85,29 @@ $history = $historyQuery->get_result();
       </thead>
       <tbody>
         <?php while ($row = $balances->fetch_assoc()): ?>
-        <tr>
-          <td><?= htmlspecialchars($row['type_name']) ?></td>
-          <td><?= $row['total_allocated'] ?></td>
-          <td><?= $row['used'] ?></td>
-          <td><?= $row['total_allocated'] - $row['used'] ?></td>
-        </tr>
+          <tr>
+            <td><?= htmlspecialchars($row['type_name']) ?></td>
+            <td><?= $row['total_allocated'] ?></td>
+            <td><?= $row['used'] ?></td>
+            <td><?= $row['total_allocated'] - $row['used'] ?></td>
+          </tr>
         <?php endwhile; ?>
       </tbody>
     </table>
   </div>
 
-  <!-- Leave History -->
   <div class="mb-4">
     <h4 class="mb-2">Leave History</h4>
+    <div class="mb-3">
+  <label for="statusFilterUser" class="form-label">Filter by Status:</label>
+  <select id="statusFilterUser" class="form-select" style="width: 200px;">
+    <option value="">All</option>
+    <option value="draft">Draft</option>
+    <option value="pending">Pending</option>
+    <option value="approved">Approved</option>
+    <option value="rejected">Rejected</option>
+  </select>
+</div>
     <table id="historytable"class="table table-striped">
       <thead>
         <tr>
@@ -107,7 +121,6 @@ $history = $historyQuery->get_result();
       <tbody>
       <?php while ($row = $history->fetch_assoc()): ?>
   <?php 
-    // choose badge color based on status
     switch ($row['status']) {
       case 'draft':     $badge = 'secondary'; break;
       case 'pending': $badge = 'warning'; break;
@@ -136,13 +149,23 @@ $history = $historyQuery->get_result();
   
 
 <script>
-  $(document).ready(function() {
-    $('#historytable').DataTable({
-      pageLength: 3,
+  $(document).ready(function () {
+    const userTable = $('#historytable').DataTable({
+      dom: 'Bfrtip',
+      buttons: [
+        'copy', 'csv', 'excel', 'pdf', 'print'
+      ],
+      pageLength: 5,
       lengthMenu: [5, 10, 20],
-      order: [[1, 'desc']]  
+      order: [[0, 'asc']]
+    });
+
+    $('#statusFilterUser').on('change', function () {
+      const selectedStatus = $(this).val().toLowerCase();
+      userTable.column(3).search(selectedStatus).draw();
     });
   });
 </script>
+
 </body>
 </html>

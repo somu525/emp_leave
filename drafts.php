@@ -10,10 +10,8 @@ include 'includes/header.php';
 $userId = $_SESSION['user_id'];
 $message = '';
 
-// — Handle Delete action via GET
 if (isset($_GET['delete'])) {
     $delId = (int)$_GET['delete'];
-    // Only delete if it belongs to this user and is still a draft
     $conn->query("
       DELETE FROM Leave_Requests 
       WHERE request_id = $delId 
@@ -24,7 +22,6 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
-// — Handle form submission (update an existing draft)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'])) {
     $reqId         = (int)$_POST['request_id'];
     $leave_type_id = (int)$_POST['leave_type'];
@@ -57,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_id'])) {
             
 }
 
-// — If an edit‑link was clicked, fetch that draft
 $editing = false;
 if (isset($_GET['edit'])) {
     $editId = (int)$_GET['edit'];
@@ -73,7 +69,6 @@ if (isset($_GET['edit'])) {
     }
 }
 
-// — Fetch leave types and draft list
 $types = $conn->query("SELECT * FROM Leave_Types WHERE leave_type_id IN (1,2,3)");
 $drafts = $conn->prepare("
   SELECT r.request_id, l.type_name, r.start_date, r.end_date 
@@ -91,7 +86,6 @@ $draftList = $drafts->get_result();
   <h2 class="mb-4">My Drafts</h2>
   <?= $message ?>
 
-  <!-- LIST VIEW -->
   <?php if (!$editing): ?>
     <?php if ($draftList->num_rows): ?>
       <table class="table table-striped">
@@ -122,7 +116,6 @@ $draftList = $drafts->get_result();
     <?php endif; ?>
   <?php endif; ?>
 
-  <!-- EDIT VIEW -->
   <?php if ($editing): ?>
     <div class="card p-4 mb-4">
       <h4>Edit Draft</h4>

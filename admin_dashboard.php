@@ -6,30 +6,25 @@ if ($_SESSION['role'] !== 'admin') {
     header("Location: index.php"); exit;
 }
 
-// Total employees (exclude manager)
+
 $resTotal = $conn->query("SELECT COUNT(*) AS total FROM Employees WHERE status='active'");
 $totalEmp = $resTotal->fetch_assoc()['total'];
 
-// Pending employee approvals
 $resEmpAppr = $conn->query("SELECT COUNT(*) AS cnt FROM Employees WHERE status='inactive'");
 $pendingEmp = $resEmpAppr->fetch_assoc()['cnt'];
 
-// Pending leave approvals
 $resLeaveAppr = $conn->query("SELECT COUNT(*) AS cnt FROM Leave_Requests WHERE status='pending'");
 $pendingLeave = $resLeaveAppr->fetch_assoc()['cnt'];
 
-// Total departments
 $resDept = $conn->query("SELECT COUNT(*) AS cnt FROM Departments");
 $totalDept = $resDept->fetch_assoc()['cnt'];
 
-// Total holidays
 $resHoli = $conn->query("SELECT COUNT(*) AS cnt FROM Holidays");
 $totalHoli = $resHoli->fetch_assoc()['cnt'];
 ?>
 <main class="flex-grow-1 container py-4">
   <h2 class="mb-4">Admin Dashboard</h2>
   <div class="row g-3">
-    <!-- Departments -->
     <div class="col-md-4">
       <a href="departments.php" class="text-decoration-none">
         <div class="card text-center shadow-sm border-dark h-100">
@@ -41,7 +36,6 @@ $totalHoli = $resHoli->fetch_assoc()['cnt'];
         </div>
       </a>
     </div>
-    <!-- Total Employees -->
     <div class="col-md-4">
       <a href="approve_employee.php" class="text-decoration-none">
         <div class="card text-center shadow-sm border-dark h-100">
@@ -53,7 +47,6 @@ $totalHoli = $resHoli->fetch_assoc()['cnt'];
         </div>
       </a>
     </div>
-    <!-- Employee Approvals -->
     <div class="col-md-4">
       <a href="approve_employee.php" class="text-decoration-none">
         <div class="card text-center shadow-sm border-primary h-100">
@@ -65,7 +58,6 @@ $totalHoli = $resHoli->fetch_assoc()['cnt'];
         </div>
       </a>
     </div>
-    <!-- Leave Approvals -->
     <div class="col-md-4">
       <a href="approve_leave.php" class="text-decoration-none">
         <div class="card text-center shadow-sm border-primary h-100">
@@ -77,7 +69,6 @@ $totalHoli = $resHoli->fetch_assoc()['cnt'];
         </div>
       </a>
     </div>
-    <!-- Holidays -->
     <div class="col-md-4">
       <a href="holidays.php" class="text-decoration-none">
         <div class="card text-center shadow-sm border-success h-100">
