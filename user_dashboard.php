@@ -11,7 +11,6 @@ require 'includes/header.php';
 $userId = $_SESSION['user_id'];
 $name = $_SESSION['name'];
 
-// Fetch leave balances
 $balanceQuery = $conn->prepare("
 SELECT 
     LT.type_name,
@@ -35,6 +34,16 @@ $historyQuery = $conn->prepare("
 $historyQuery->bind_param("i", $userId);
 $historyQuery->execute();
 $history = $historyQuery->get_result();
+$draftQuery = $conn->prepare("
+  SELECT COUNT(*) AS draft_count
+  FROM Leave_Requests
+  WHERE employee_id = ? AND status = 'draft'
+");
+$draftQuery->bind_param("i", $userId);
+$draftQuery->execute();
+$draftResult = $draftQuery->get_result()->fetch_assoc();
+$draftCount = $draftResult['draft_count'];
+
 ?>
 
 <!DOCTYPE html>
@@ -70,31 +79,37 @@ $history = $historyQuery->get_result();
 <body class="container mt-5">
   
   
-  <div class="mb-4">
-    <h4>Leave Balances</h4>
-    
+  <div class="row g-3 mb-4">
+  <?php while ($row = $balances->fetch_assoc()): ?>
+    <div class="col-md-3">
+      <a href="apply_leave.php" class="text-decoration-none">
+        <div class="card text-center shadow-sm border-dark h-100">
+          <div class="card-body">
+            <h5 class="card-title text-dark"><?= htmlspecialchars($row['type_name']) ?></h5>
+            <p class="display-4 text-success">
+              <?= max(0, $row['total_allocated'] - $row['used']) ?>
+            </p>
+            <p class="card-text">Remaining</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  <?php endwhile; ?>
 
-    <table class="table table-bordered">
-      <thead>
-        <tr>
-          <th>Leave Type</th>
-          <th>Allocated</th>
-          <th>Used</th>
-          <th>Remaining</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php while ($row = $balances->fetch_assoc()): ?>
-          <tr>
-            <td><?= htmlspecialchars($row['type_name']) ?></td>
-            <td><?= $row['total_allocated'] ?></td>
-            <td><?= $row['used'] ?></td>
-            <td><?= $row['total_allocated'] - $row['used'] ?></td>
-          </tr>
-        <?php endwhile; ?>
-      </tbody>
-    </table>
+  <!-- Draft Tile -->
+  <div class="col-md-3">
+    <a href="drafts.php" class="text-decoration-none">
+      <div class="card text-center shadow-sm border-dark h-100">
+        <div class="card-body">
+          <h5 class="card-title text-dark">Drafts</h5>
+          <p class="display-4 text-warning"><?= $draftCount ?></p>
+          <p class="card-text">Saved Drafts</p>
+        </div>
+      </div>
+    </a>
   </div>
+</div>
+
 
   <div class="mb-4">
     <h4 class="mb-2">Leave History</h4>

@@ -9,6 +9,22 @@
     function switchRole(role) {
       document.getElementById('role').value = role;
       document.getElementById('roleLabel').innerText = role.charAt(0).toUpperCase() + role.slice(1) + " Login";
+      const employeeBtn = document.getElementById('employeeBtn');
+      const adminBtn = document.getElementById('adminBtn');
+
+      if (role === 'employee') {
+        employeeBtn.classList.remove('btn-outline-primary');
+        employeeBtn.classList.add('btn-primary');
+
+        adminBtn.classList.remove('btn-danger');
+        adminBtn.classList.add('btn-outline-danger');
+      } else if (role === 'admin') {
+        adminBtn.classList.remove('btn-outline-danger');
+        adminBtn.classList.add('btn-danger');
+
+        employeeBtn.classList.remove('btn-primary');
+        employeeBtn.classList.add('btn-outline-primary');
+      }
     }
     setInterval(() => {
       const resendBtn = document.getElementById('resendBtn');
@@ -23,9 +39,10 @@
     <h3 class="text-center mb-3" id="roleLabel">Employee Login</h3>
 
     <div class="btn-group w-100 mb-3" role="group">
-      <button type="button" class="btn btn-outline-primary" onclick="switchRole('employee')">Employee</button>
-      <button type="button" class="btn btn-outline-danger" onclick="switchRole('admin')">Admin</button>
-    </div>
+  <button id="employeeBtn" type="button" class="btn btn-outline-primary" onclick="switchRole('employee')">Employee</button>
+  <button id="adminBtn" type="button" class="btn btn-outline-danger" onclick="switchRole('admin')">Admin</button>
+</div>
+
 
     <?php if (!isset($_SESSION['awaiting_otp'])): ?>
     <form method="post">
@@ -44,8 +61,8 @@
       <button name="verify_otp" class="btn btn-success w-100">Verify OTP</button>
     </form>
     <form method="post">
-    <button name="resend_otp" class="btn btn-link p-0 mt-2 text-secondary" id="resendBtn" data-expire="<?= $_SESSION['otp_time'] + 60 ?>" disabled>
-  Resend OTP (<span id="countdown">60</span>s)
+    <button name="resend_otp" class="btn btn-link p-0 mt-2 text-secondary"  id="resendBtn" data-expire="<?= $_SESSION['otp_time'] + 60 ?>" disabled>
+  Resend OTP (<span  id="countdown">60</span>s)
 </button>
     </form>
     <?php endif; ?>

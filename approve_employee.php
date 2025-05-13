@@ -205,8 +205,8 @@ if (isset($_POST['delete_employee'])) {
                         <div class="modal-header"><h5>Edit Employee</h5></div>
                         <div class="modal-body">
                             <input type="hidden" name="emp_id" value="<?= $row['employee_id'] ?>">
-                            <input name="edit_name" class="form-control mb-2" value="<?= $row['name'] ?>" required>
-                            <input name="edit_email" class="form-control mb-2" value="<?= $row['email'] ?>" required>
+                            <input name="edit_name" class="form-control mb-2" value="<?= $row['name'] ?>" style="background-color: lightgray;cursor: not-allowed;" readonly >
+                            <input name="edit_email" class="form-control mb-2" value="<?= $row['email'] ?>" style="background-color: lightgray;cursor: not-allowed;" readonly>
                             <select name="edit_department_id" class="form-control mb-2">
                                 <?php
                                 $depts = $conn->query("SELECT * FROM Departments");

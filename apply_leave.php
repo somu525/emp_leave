@@ -11,6 +11,15 @@ $userId = $_SESSION['user_id'];
 $message = '';
 $types = $conn->query("SELECT * FROM Leave_Types WHERE leave_type_id IN (1,2,3)");
 
+// Fetch holiday dates
+$holidays = [];
+$year = date('Y');
+$holidayQuery = $conn->query("SELECT holiday_date FROM Holidays WHERE YEAR(holiday_date) = '$year'");
+while ($row = $holidayQuery->fetch_assoc()) {
+    $holidays[] = $row['holiday_date'];
+}
+$holidayJson = json_encode($holidays);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $leave_type_id = (int)$_POST['leave_type'];
     $start_date    = $_POST['start_date'];
@@ -19,22 +28,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status        = in_array($_POST['action'], ['draft', 'pending']) ? $_POST['action'] : 'draft';
     $start = new DateTime($start_date);
     $end = new DateTime($end_date);
-    function countWeekdays($start, $end) {
-      $count = 0;
-      $current = clone $start;
-      while ($current <= $end) {
-          $day = $current->format('N'); 
-          if ($day < 6) $count++;
-          $current->modify('+1 day');
-      }
-      return $count;
-  }
-  $days = countWeekdays($start, $end);
-  
+
+    // Count only valid days (no weekends or holidays)
+    function countValidDays($start, $end, $holidays) {
+        $count = 0;
+        $current = clone $start;
+        while ($current <= $end) {
+            $day = $current->format('N');
+            $dateStr = $current->format('Y-m-d');
+            if ($day < 6 && !in_array($dateStr, $holidays)) {
+                $count++;
+            }
+            $current->modify('+1 day');
+        }
+        return $count;
+    }
+
+    $days = countValidDays($start, $end, $holidays);
 
     if ($status === 'pending') {
         if ($days > 3) {
-            $message = "<div class='alert alert-warning'>You cannot apply for more than 3 days.</div>";
+            $message = "<div class='alert alert-warning'>You cannot apply for more than 3 valid leave days (excluding weekends & holidays).</div>";
         } else {
             $year = date('Y');
             $check = $conn->prepare("SELECT total_allocated, used FROM leave_balances WHERE employee_id = ? AND leave_type_id = ? AND year = ?");
@@ -109,11 +123,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <div class="mb-3">
-  <label class="form-label">Leave Dates (max 3 working days, weekends excluded)</label>
-  <input type="text" id="leave_range" class="form-control" placeholder="Select date range" required>
-  <input type="hidden" name="start_date" id="start_date">
-  <input type="hidden" name="end_date" id="end_date">
-</div>
+      <label class="form-label">Leave Dates (max 3 working days)</label>
+      <input type="text" id="leave_range" class="form-control" placeholder="Select date range" required>
+      <input type="hidden" name="start_date" id="start_date">
+      <input type="hidden" name="end_date" id="end_date">
+    </div>
 
     <div class="mb-3">
       <label class="form-label">Reason</label>
@@ -125,15 +139,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <button type="submit" name="action" value="pending" class="btn btn-primary">Submit for Approval</button>
     </div>
   </form>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</main>
+
+<!-- Scripts -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const countWeekdays = (start, end) => {
+  const holidays = <?= $holidayJson ?>;
+  const today = new Date();
+  const endOfYear = new Date(today.getFullYear(), 11, 31);
+
+  // Helpers
+  const isWeekend = date => [0, 6].includes(date.getDay());
+  const isHoliday = date => holidays.includes(date.toISOString().split('T')[0]);
+
+  const countValidDays = (start, end) => {
     let count = 0;
     const current = new Date(start);
     while (current <= end) {
-      const day = current.getDay();
-      if (day !== 0 && day !== 6) count++; 
+      if (!isWeekend(current) && !isHoliday(current)) count++;
       current.setDate(current.getDate() + 1);
     }
     return count;
@@ -142,12 +168,21 @@ document.addEventListener('DOMContentLoaded', function () {
   flatpickr("#leave_range", {
     mode: "range",
     dateFormat: "Y-m-d",
-    onClose: function (selectedDates) {
+    minDate: today,
+    maxDate: endOfYear,
+    onDayCreate: function(dObj, dStr, fp, dayElem) {
+      const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+      if (holidays.includes(dateStr)) {
+        dayElem.classList.add('holiday');
+        dayElem.setAttribute('title', 'Holiday');
+      }
+    },
+    onClose: function(selectedDates) {
       if (selectedDates.length === 2) {
         const [start, end] = selectedDates;
-        const weekdays = countWeekdays(start, end);
-        if (weekdays > 3) {
-          alert("You can only apply for up to 3 working days (weekends not counted).");
+        const validDays = countValidDays(start, end);
+        if (validDays > 3) {
+          alert("You can apply for a maximum of 3 working days (excluding weekends & holidays).");
           this.clear();
           document.getElementById("start_date").value = '';
           document.getElementById("end_date").value = '';
@@ -157,9 +192,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       }
     }
-  });
-});
+    
+  });});
 </script>
 
 
-</main>
+<style>
+  .holiday {
+    background-color: #ffc107 !important;
+    color: #000;
+  }
+</style>
