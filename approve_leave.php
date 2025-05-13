@@ -213,7 +213,7 @@ if (!$result) {
       ],
       pageLength: 5,
       lengthMenu: [5, 10, 20],
-      order: [[0, 'asc']]
+      order: [[2, 'asc']]
     });
 
     $('#statusFilter').on('change', function () {

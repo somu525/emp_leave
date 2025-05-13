@@ -172,7 +172,7 @@ $draftCount = $draftResult['draft_count'];
       ],
       pageLength: 5,
       lengthMenu: [5, 10, 20],
-      order: [[0, 'asc']]
+      order: [[1, 'desc']]
     });
 
     $('#statusFilterUser').on('change', function () {

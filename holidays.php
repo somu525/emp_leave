@@ -69,7 +69,7 @@ if (isset($_POST['deleteHoliday'])) {
     echo('<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">+ Add Holiday</button>');}?>
   </div>
 
-  <table id="holidaysTable" class="table table-bordered table-hover">
+  <table id="holidaysTable" class="table table-striped table-hover">
     <thead class="table-light">
       <tr>
         <th>#</th>
